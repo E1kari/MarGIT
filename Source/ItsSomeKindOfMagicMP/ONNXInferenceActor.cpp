@@ -1,7 +1,9 @@
-﻿#include "ONNXInferenceActor.h"
+﻿// ONNXInferenceActor.cpp
+
+#include "ONNXInferenceActor.h"
 #include "Modules/ModuleManager.h"
-#include "Engine/Engine.h"  // Für GEngine->AddOnScreenDebugMessage
-#include <cfloat>            // Für FLT_MAX
+#include "Engine/Engine.h"      // Für GEngine->AddOnScreenDebugMessage
+#include <cfloat>              // Für FLT_MAX
 
 AONNXInferenceActor::AONNXInferenceActor()
 {
@@ -18,8 +20,8 @@ void AONNXInferenceActor::BeginPlay()
         return;
     }
 
-    // CPU-Runtime abrufen (hier: "NNERuntimeORTCpu")
-    TWeakInterfacePtr<INNERuntimeCPU> Runtime = UE::NNE::GetRuntime<INNERuntimeCPU>(FString("NNERuntimeORTCpu"));
+    // CPU‐Runtime beschaffen
+    TWeakInterfacePtr<INNERuntimeCPU> Runtime = UE::NNE::GetRuntime<INNERuntimeCPU>(TEXT("NNERuntimeORTCpu"));
     if (!Runtime.IsValid())
     {
         UE_LOG(LogTemp, Error, TEXT("Cannot find runtime 'NNERuntimeORTCpu'. Please enable the corresponding plugin."));
@@ -35,14 +37,11 @@ void AONNXInferenceActor::BeginPlay()
     }
 
     // Modellinstanz erstellen
-    TSharedPtr<UE::NNE::IModelInstanceCPU> Instance = Model->CreateModelInstanceCPU();
-    if (!Instance.IsValid())
+    ModelInstance = Model->CreateModelInstanceCPU();
+    if (!ModelInstance.IsValid())
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to create the model instance."));
-        return;
     }
-
-    ModelInstance = Instance;
 }
 
 FPredictionResult AONNXInferenceActor::RunInferenceBP(const TArray<float>& InputData)
@@ -56,74 +55,68 @@ FPredictionResult AONNXInferenceActor::RunInferenceBP(const TArray<float>& Input
         return Result;
     }
 
-    // Überprüfen: Anzahl der Eingabedaten muss der erwarteten Anzahl entsprechen (z. B. 4096 Werte)
     if (InputData.Num() != 4096)
     {
         UE_LOG(LogTemp, Error, TEXT("Input data size is incorrect. Expected: 4096, Received: %d"), InputData.Num());
         return Result;
     }
 
-    // (Optional) Logge die erwarteten Input-Tensorbeschreibungen
-    {
-        TConstArrayView<UE::NNE::FTensorDesc> InputDescs = ModelInstance->GetInputTensorDescs();
-        for (int32 i = 0; i < InputDescs.Num(); ++i)
-        {
-            UE_LOG(LogTemp, Log, TEXT("Model Input %d: Name = %s"), i, *InputDescs[i].GetName());
-            const UE::NNE::FSymbolicTensorShape& SymbolicShape = InputDescs[i].GetShape();
-            TConstArrayView<int32> ShapeData = SymbolicShape.GetData();
-            FString DimensionString;
-            for (int32 j = 0; j < ShapeData.Num(); ++j)
-            {
-                DimensionString.Append(FString::Printf(TEXT("%d "), ShapeData[j]));
-            }
-            UE_LOG(LogTemp, Log, TEXT("Input Tensor %d Shape: %s"), i, *DimensionString);
-        }
-    }
-
-    // Erstelle das konkrete Eingabe-Shape. Da das Modell "-1 64 64 1" erwartet (wobei -1 für variable Batch-Größe steht),
-    // ersetzen wir es durch 1: also {1, 64, 64, 1}.
+    // Konkrete Input-Shape setzen (Batch=1, 64×64×1)
     TArray<uint32> ConcreteDims = { 1, 64, 64, 1 };
     UE::NNE::FTensorShape InputShape = UE::NNE::FTensorShape::Make(ConcreteDims);
-
-    // Setze die Input-Tensor-Shape. Wenn dies fehlschlägt, gib das Ergebnis zurück.
-    auto SetStatus = ModelInstance->SetInputTensorShapes({ InputShape });
-    if (SetStatus != UE::NNE::EResultStatus::Ok)
+    if (ModelInstance->SetInputTensorShapes({ InputShape }) != UE::NNE::EResultStatus::Ok)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to set input tensor shapes."));
         return Result;
     }
 
-    // Erstelle das Input-Binding.
+    // ** Neu: dynamisch die Anzahl der Output-Klassen ermitteln **
+    auto OutputDescs = ModelInstance->GetOutputTensorDescs();
+    check(OutputDescs.Num() == 1);
+    const auto ShapeData = OutputDescs[0].GetShape().GetData();
+    int32 NumModelClasses = 1;
+    if (ShapeData.Num() >= 2 && ShapeData[1] > 0)
+    {
+        NumModelClasses = ShapeData[1];
+    }
+    else if (RuneMappings.Num() > 0)
+    {
+        NumModelClasses = RuneMappings.Num();
+    }
+    else
+    {
+        NumModelClasses = 2;
+    }
+
+    // Input-Binding erstellen
     UE::NNE::FTensorBindingCPU InputTensor;
     InputTensor.Data = const_cast<float*>(InputData.GetData());
     InputTensor.SizeInBytes = InputData.Num() * sizeof(float);
-    TArray<UE::NNE::FTensorBindingCPU> Inputs;
-    Inputs.Add(InputTensor);
+    TArray<UE::NNE::FTensorBindingCPU> Inputs = { InputTensor };
 
-    // Bestimme die Anzahl der Klassen anhand der Länge des Mappings (Fallback: 2)
-    int32 NumClasses = (RuneMappings.Num() > 0) ? RuneMappings.Num() : 2;
+    // Output-Binding mit exakt so vielen Floats wie das Modell liefert
     UE::NNE::FTensorBindingCPU OutputTensor;
-    OutputTensor.SizeInBytes = NumClasses * sizeof(float);
+    OutputTensor.SizeInBytes = NumModelClasses * sizeof(float);
     OutputTensor.Data = FMemory::Malloc(OutputTensor.SizeInBytes);
-    TArray<UE::NNE::FTensorBindingCPU> Outputs;
-    Outputs.Add(OutputTensor);
+    TArray<UE::NNE::FTensorBindingCPU> Outputs = { OutputTensor };
 
-    auto RunStatus = ModelInstance->RunSync(Inputs, Outputs);
-    if (RunStatus != UE::NNE::EResultStatus::Ok)
+    // Inferenz synchron ausführen
+    if (ModelInstance->RunSync(Inputs, Outputs) != UE::NNE::EResultStatus::Ok)
     {
         UE_LOG(LogTemp, Error, TEXT("Model inference failed."));
         FMemory::Free(OutputTensor.Data);
         return Result;
     }
 
-    // Verarbeite den Output und erhalte ein FPredictionResult
-    Result = ProcessOutput(Outputs);
+    // Output auswerten
+    Result = ProcessOutput(Outputs, NumModelClasses);
 
+    // Puffer wieder freigeben
     FMemory::Free(OutputTensor.Data);
     return Result;
 }
 
-FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTensorBindingCPU>& Outputs)
+FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTensorBindingCPU>& Outputs, int32 NumClasses)
 {
     FPredictionResult Result;
     Result.bSuccess = false;
@@ -131,11 +124,11 @@ FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTens
     Result.Confidence = 0.f;
     Result.PredictedLabel = TEXT("Unknown");
 
-    if (Outputs.Num() > 0 && Outputs[0].Data != nullptr)
+    if (Outputs.Num() > 0 && Outputs[0].Data)
     {
         float* Predictions = static_cast<float*>(Outputs[0].Data);
-        int32 NumClasses = (RuneMappings.Num() > 0) ? RuneMappings.Num() : 2;
 
+        // Spitzenklasse finden
         int32 PredictedClass = -1;
         float BestScore = -FLT_MAX;
         for (int32 i = 0; i < NumClasses; ++i)
@@ -147,47 +140,51 @@ FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTens
             }
         }
 
-        // Falls die beste Konfidenz unter dem Threshold liegt, suche den Mapping-Eintrag, dessen Name "Unknown" (unabhängig von der Groß-/Kleinschreibung) lautet.
+        // Falls unter Threshold, auf Unknown zurücksetzen
         if (BestScore < ConfidenceThreshold)
         {
-            for (const FRuneMapping& Mapping : RuneMappings)
+            int32 UnknownIndex = -1;
+            for (const FRuneMapping& M : RuneMappings)
             {
-                if (Mapping.RuneName.Equals(TEXT("Unknown"), ESearchCase::IgnoreCase))
+                if (M.RuneName.Equals(TEXT("Unknown"), ESearchCase::IgnoreCase))
                 {
-                    PredictedClass = Mapping.Index;
+                    UnknownIndex = M.Index;
                     break;
                 }
             }
+            PredictedClass = UnknownIndex;
+            BestScore = 0.f;  // auf definierten Default zurücksetzen
         }
 
+        // Ergebnis füllen
         Result.PredictedIndex = PredictedClass;
         Result.Confidence = BestScore;
         Result.bSuccess = true;
 
-        // Suche im Mapping nach dem Eintrag, der dem berechneten Index entspricht.
-        bool bFoundMapping = false;
-        for (const FRuneMapping& Mapping : RuneMappings)
+        // Label aus Mapping suchen
+        bool bFound = false;
+        for (const FRuneMapping& M : RuneMappings)
         {
-            if (Mapping.Index == PredictedClass)
+            if (M.Index == PredictedClass)
             {
-                Result.PredictedLabel = Mapping.RuneName;
-                bFoundMapping = true;
+                Result.PredictedLabel = M.RuneName;
+                bFound = true;
                 break;
             }
         }
-        if (!bFoundMapping)
+        if (!bFound)
         {
-            // Fallback: Setze "Unknown", falls kein Mapping für den Index gefunden wurde.
             Result.PredictedLabel = TEXT("Unknown");
         }
 
-        // Anzeige als Log und On-Screen-Message
-        FString ResultString = FString::Printf(TEXT("Predicted Rune: %s (Index: %d, Confidence: %.2f)"),
+        // Loggen / On-Screen-Debug
+        FString LogStr = FString::Printf(
+            TEXT("Predicted Rune: %s (Index: %d, Confidence: %.2f)"),
             *Result.PredictedLabel, Result.PredictedIndex, Result.Confidence);
-        UE_LOG(LogTemp, Log, TEXT("%s"), *ResultString);
+        UE_LOG(LogTemp, Log, TEXT("%s"), *LogStr);
         if (GEngine)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, ResultString);
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, LogStr);
         }
     }
     else
@@ -195,7 +192,8 @@ FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTens
         UE_LOG(LogTemp, Warning, TEXT("No valid output data received from the model."));
         if (GEngine)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("No valid output data received from the model."));
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,
+                TEXT("No valid output data received from the model."));
         }
     }
 

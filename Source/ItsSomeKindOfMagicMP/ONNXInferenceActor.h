@@ -99,5 +99,5 @@ private:
     TSharedPtr<UE::NNE::IModelInstanceCPU> ModelInstance;
 
     /** Wandelt den Output des Modells in ein FPredictionResult um und berücksichtigt den Threshold. */
-    FPredictionResult ProcessOutput(const TArray<UE::NNE::FTensorBindingCPU>& Outputs);
+    FPredictionResult ProcessOutput(const TArray<UE::NNE::FTensorBindingCPU>& Outputs, int32 NumClasses);
 };
