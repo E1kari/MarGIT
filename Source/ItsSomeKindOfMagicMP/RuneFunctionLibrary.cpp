@@ -40,7 +40,11 @@ void URuneFunctionLibrary::GetCanvasGrayscaleData(UCanvasRenderTarget2D* Canvas,
     }
 }
 
-bool URuneFunctionLibrary::SaveCanvasRenderTargetToPNG(UCanvasRenderTarget2D* Canvas, const FString& FolderPath, const FString& FileName)
+bool URuneFunctionLibrary::SaveCanvasRenderTargetToPNG(
+    UCanvasRenderTarget2D* Canvas,
+    const FString& FolderPath,
+    const FString& FileName
+)
 {
     if (!Canvas)
     {
@@ -78,11 +82,23 @@ bool URuneFunctionLibrary::SaveCanvasRenderTargetToPNG(UCanvasRenderTarget2D* Ca
 
     const TArray64<uint8>& PngData = Wrapper->GetCompressed(100);
 
-    // Pfad im Saved-Ordner
-    FString AbsoluteFolder = FPaths::ProjectSavedDir();
+    // Projekt-Ordner + optionaler Unterordner
+    FString ProjectRoot = FPaths::ProjectDir();
+    FString AbsoluteFolder = FolderPath.IsEmpty() ? ProjectRoot : FPaths::Combine(ProjectRoot, FolderPath);
+    IPlatformFile& PFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PFile.DirectoryExists(*AbsoluteFolder))
+    {
+        PFile.CreateDirectoryTree(*AbsoluteFolder);
+    }
 
-    // Datei-Pfad
-    FString FullPath = AbsoluteFolder / FileName;
+    // Sicherstellen der .png-Endung
+    FString ValidFileName = FileName;
+    if (!ValidFileName.EndsWith(TEXT(".png"), ESearchCase::IgnoreCase))
+    {
+        ValidFileName += TEXT(".png");
+    }
+
+    FString FullPath = FPaths::Combine(AbsoluteFolder, ValidFileName);
 
     if (FFileHelper::SaveArrayToFile(PngData, *FullPath))
     {
@@ -102,17 +118,16 @@ bool URuneFunctionLibrary::SaveDebugStatsToText(
     const FString& FileName
 )
 {
-    // Projekt-Ordner Pfad und DebugFiles-Ordner
-    FString DebugFolder = FPaths::ProjectDir() / TEXT("DebugFiles");
+    // Projekt-Ordner/DebugFiles
+    FString DebugFolder = FPaths::Combine(FPaths::ProjectDir(), TEXT("DebugFiles"));
     IPlatformFile& PFile = FPlatformFileManager::Get().GetPlatformFile();
     if (!PFile.DirectoryExists(*DebugFolder))
     {
         PFile.CreateDirectoryTree(*DebugFolder);
     }
 
-    const FString FilePath = DebugFolder / FileName;
+    const FString FilePath = FPaths::Combine(DebugFolder, FileName);
 
-    // Inhalt zusammensetzen
     FString OutString;
     OutString += TEXT("=== Rune Usage Stats ===\n\n");
     for (UDebugRuneCount* Entry : RuneCounts)
@@ -138,7 +153,6 @@ bool URuneFunctionLibrary::SaveDebugStatsToText(
         );
     }
 
-    // Datei schreiben
     if (FFileHelper::SaveStringToFile(OutString, *FilePath))
     {
         UE_LOG(LogTemp, Log, TEXT("Debug stats saved to %s"), *FilePath);
