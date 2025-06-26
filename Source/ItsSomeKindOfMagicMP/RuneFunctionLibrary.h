@@ -11,16 +11,19 @@ class ITSSOMEKINDOFMAGICMP_API URuneFunctionLibrary : public UBlueprintFunctionL
     GENERATED_BODY()
 
 public:
-
     /** Liest ein CanvasRenderTarget aus und gibt ein Graustufen-Floatarray zurück (0.0–1.0) */
     UFUNCTION(BlueprintCallable, Category = "Rune")
     static void GetCanvasGrayscaleData(UCanvasRenderTarget2D* Canvas, TArray<float>& OutData);
 
-    /** Speichert ein CanvasRenderTarget als PNG-Datei */
+    /** Speichert ein CanvasRenderTarget als PNG-Datei im Projekt-Ordner/FoldersPath */
     UFUNCTION(BlueprintCallable, Category = "Rune")
-    static bool SaveCanvasRenderTargetToPNG(UCanvasRenderTarget2D* Canvas, const FString& FolderPath, const FString& FileName);
+    static bool SaveCanvasRenderTargetToPNG(
+        UCanvasRenderTarget2D* Canvas,
+        const FString& FolderPath,
+        const FString& FileName
+    );
 
-    /** Speichert Rune- und Spell-Statistiken in einer TXT-Datei im Saved-Ordner */
+    /** Speichert Rune- und Spell-Statistiken in einer TXT-Datei im Projekt-Ordner/DebugFiles */
     UFUNCTION(BlueprintCallable, Category = "Debug")
     static bool SaveDebugStatsToText(
         const TArray<UDebugRuneCount*>& RuneCounts,
