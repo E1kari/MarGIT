@@ -21,6 +21,9 @@ public:
 	virtual void Deinitialize() override;
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void SetBaseTrack(USoundBase* BaseTrack);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void PlayMusic(USoundBase* Track, float FadeInTime = 1.0f, float Volume = 1.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")

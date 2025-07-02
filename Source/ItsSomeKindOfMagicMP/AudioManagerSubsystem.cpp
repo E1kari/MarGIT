@@ -22,6 +22,17 @@ void UAudioManagerSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
+void UAudioManagerSubsystem::SetBaseTrack(USoundBase* BaseTrack)
+{
+	if (BaseTrack)
+	{
+		UWorld* World = GetWorld();
+		if (!World) return;
+
+		CurrentMusicComponent = UGameplayStatics::SpawnSound2D(World, BaseTrack, 1.0f, 1.0f, 0.0f, nullptr, true, true);
+	}
+}
+
 void UAudioManagerSubsystem::PlayMusic(USoundBase* Track, float FadeInTime, float Volume)
 {
 	if (!Track) return;
@@ -77,6 +88,7 @@ void UAudioManagerSubsystem::CrossfadeMusic(USoundBase* NewTrack, float FadeTime
 
 void UAudioManagerSubsystem::FadeMusicLayer(FName LayerName, float Volume)
 {
+	if (!CurrentMusicComponent) return;
 	CurrentMusicComponent->SetFloatParameter(LayerName, Volume);
 }
 
