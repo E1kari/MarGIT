@@ -30,6 +30,9 @@ public:
 	void CrossfadeMusic(USoundBase* NewTrack, float FadeTime = 1.0f, float Volume = 1.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void FadeMusicLayer(FName LayerName, float Volume);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void PlaySFX2D(USoundBase* Sfx, float Volume = 1.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")

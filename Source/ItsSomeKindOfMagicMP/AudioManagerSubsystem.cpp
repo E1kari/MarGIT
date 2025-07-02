@@ -75,6 +75,11 @@ void UAudioManagerSubsystem::CrossfadeMusic(USoundBase* NewTrack, float FadeTime
 	}
 }
 
+void UAudioManagerSubsystem::FadeMusicLayer(FName LayerName, float Volume)
+{
+	CurrentMusicComponent->SetFloatParameter(LayerName, Volume);
+}
+
 void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, float Volume)
 {
 	if (!Sfx) return;
