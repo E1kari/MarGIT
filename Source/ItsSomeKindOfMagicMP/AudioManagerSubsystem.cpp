@@ -36,10 +36,9 @@ void UAudioManagerSubsystem::PlayMusic(USoundBase* Track, float FadeInTime, floa
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	CurrentMusicComponent = UGameplayStatics::SpawnSound2D(World, Track, 0.0f);
+	CurrentMusicComponent = UGameplayStatics::SpawnSound2D(World, Track, 1.0f, 1.0f, 0.0f, nullptr, true, true);
 	if (CurrentMusicComponent)
 	{
-		CurrentMusicComponent->SetVolumeMultiplier(0.0f);
 		CurrentMusicComponent->Play();
 		CurrentMusicComponent->FadeIn(FadeInTime, Volume);
 	}
@@ -62,7 +61,7 @@ void UAudioManagerSubsystem::CrossfadeMusic(USoundBase* NewTrack, float FadeTime
 
 	UAudioComponent* OldComp = CurrentMusicComponent;
 
-	CurrentMusicComponent = UGameplayStatics::SpawnSound2D(World, NewTrack, 0.0f);
+	CurrentMusicComponent = UGameplayStatics::SpawnSound2D(World, NewTrack, 1.0f, 1.0f, 0.0f, nullptr, true, true);
 	if (CurrentMusicComponent)
 	{
 		CurrentMusicComponent->Play();
@@ -74,6 +73,26 @@ void UAudioManagerSubsystem::CrossfadeMusic(USoundBase* NewTrack, float FadeTime
 		OldComp->FadeOut(FadeTime, 0.0f);
 		HandleOldMusicFadeOut(OldComp, FadeTime);
 	}
+}
+
+void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, float Volume)
+{
+	if (!Sfx) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	UGameplayStatics::SpawnSound2D(World, Sfx, Volume, 0.0f, 0.0f, nullptr, false, true);
+}
+
+void UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, float Volume)
+{
+	if (!Sfx) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume, 0.0f, 0.0f, Attenuation, nullptr, true);
 }
 
 void UAudioManagerSubsystem::HandleOldMusicFadeOut(UAudioComponent* OldComp, float Delay)

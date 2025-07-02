@@ -29,6 +29,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void CrossfadeMusic(USoundBase* NewTrack, float FadeTime = 1.0f, float Volume = 1.0f);
 
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void PlaySFX2D(USoundBase* Sfx, float Volume = 1.0f);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, float Volume = 1.0f);
+
 private:
 	UPROPERTY()
 	UAudioComponent* CurrentMusicComponent = nullptr;
