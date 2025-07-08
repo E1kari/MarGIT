@@ -19,7 +19,7 @@ bool ULevelFunctionLibrary::IsActorInSublevel(const AActor* Actor, const TSoftOb
 	return ActorLevelPackage.Equals(RefPackage, ESearchCase::IgnoreCase);
 }
 
-FString ULevelFunctionLibrary::GetLevelNameFromReference(const TSoftObjectPtr<UWorld>& WorldReference)
+FString ULevelFunctionLibrary::GetSublevelNameFromReference(const TSoftObjectPtr<UWorld>& WorldReference)
 {
     FString FullPath = WorldReference.ToSoftObjectPath().GetAssetPathString();
     return GetPathNameAfterDot(FullPath);
@@ -34,5 +34,62 @@ FString ULevelFunctionLibrary::GetPathNameAfterDot(const FString& AssetPath)
         return AssetPath.Mid(DotIndex + 1);
     }
     return AssetPath;
+}
+
+void ULevelFunctionLibrary::GetAllLoadedSublevelNames(UObject* WorldContextObject, TArray<FString>& OutLevelNames)
+{
+    OutLevelNames.Empty();
+    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    for (ULevelStreaming* LS : World->GetStreamingLevels())
+    {
+        if (LS && LS->IsLevelLoaded())
+        {
+            FString FullPath = LS->GetWorldAssetPackageName();
+            FString Name = GetPathNameAfterDot(FullPath);
+            OutLevelNames.AddUnique(Name);
+        }
+    }
+}
+
+void ULevelFunctionLibrary::GetAllLoadedSublevel(UObject* WorldContextObject, TArray<TSoftObjectPtr<UWorld>>& OutLevel)
+{
+    OutLevel.Empty();
+    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    for (ULevelStreaming* LS : World->GetStreamingLevels())
+    {
+        if (LS && LS->IsLevelLoaded())
+        {
+            TSoftObjectPtr<UWorld> LvlRef = LS->GetWorldAsset();
+            OutLevel.AddUnique(LvlRef);
+        }
+    }
+}
+
+bool ULevelFunctionLibrary::IsSublevelLoaded(UObject* WorldContextObject, const TSoftObjectPtr<UWorld>& LevelReference)
+{
+    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    FString RefPath = LevelReference.ToSoftObjectPath().GetAssetPathString();
+    FString RefName = GetPathNameAfterDot(RefPath);
+
+    for (ULevelStreaming* LS : World->GetStreamingLevels())
+    {
+        FString CurName = GetPathNameAfterDot(LS->GetWorldAssetPackageName());
+        if (CurName.Equals(RefName, ESearchCase::IgnoreCase))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ULevelFunctionLibrary::GetAllSublevel(UObject* WorldContextObject, TArray<TSoftObjectPtr<UWorld>>& OutLevel)
+{
+    OutLevel.Empty();
+    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    for (ULevelStreaming* LS : World->GetStreamingLevels())
+    {
+        TSoftObjectPtr<UWorld> LvlRef = LS->GetWorldAsset();
+        OutLevel.AddUnique(LvlRef);
+    }
 }
 

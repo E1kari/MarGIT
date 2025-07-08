@@ -21,7 +21,19 @@ public:
 	static bool IsActorInSublevel(const AActor* Actor, const TSoftObjectPtr<UWorld>& WorldReference);
 
 	UFUNCTION(BlueprintCallable, Category = "Level | Utils")
-	static FString GetLevelNameFromReference(const TSoftObjectPtr<UWorld>& WorldReference);
+	static FString GetSublevelNameFromReference(const TSoftObjectPtr<UWorld>& WorldReference);
 
 	static FString GetPathNameAfterDot(const FString& AssetPath);
+
+	UFUNCTION(BlueprintCallable, Category = "Level | Utils", meta = (WorldContext = "WorldContextObject"))
+	static void GetAllLoadedSublevelNames(UObject* WorldContextObject, TArray<FString>& OutLevelNames);
+
+	UFUNCTION(BlueprintCallable, Category = "Level | Utils", meta = (WorldContext = "WorldContextObject"))
+	static void GetAllLoadedSublevel(UObject* WorldContextObject, TArray<TSoftObjectPtr<UWorld>>& OutLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Level | Utils", meta = (WorldContext = "WorldContextObject"))
+	static bool IsSublevelLoaded(UObject* WorldContextObject, const TSoftObjectPtr<UWorld>& LevelReference);
+
+	UFUNCTION(BlueprintCallable, Category = "Level | Utils", meta = (WorldContext = "WorldContextObject"))
+	static void GetAllSublevel(UObject* WorldContextObject, TArray<TSoftObjectPtr<UWorld>>& OutLevel);
 };
