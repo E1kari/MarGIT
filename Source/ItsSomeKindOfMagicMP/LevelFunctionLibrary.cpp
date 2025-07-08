@@ -82,10 +82,19 @@ bool ULevelFunctionLibrary::IsSublevelLoaded(UObject* WorldContextObject, const 
     return false;
 }
 
-void ULevelFunctionLibrary::GetAllSublevel(UObject* WorldContextObject, TArray<TSoftObjectPtr<UWorld>>& OutLevel)
+void ULevelFunctionLibrary::GetAllSublevel(const TSoftObjectPtr<UWorld>& WorldRef, TArray<TSoftObjectPtr<UWorld>>& OutLevel)
 {
     OutLevel.Empty();
-    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    UWorld* World = WorldRef.Get();
+    if (!World)
+    {
+        World = WorldRef.LoadSynchronous();
+    }
+    if (!World)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("GetAllSublevel: WorldRef konnte nicht geladen werden"));
+        return;
+    }
     for (ULevelStreaming* LS : World->GetStreamingLevels())
     {
         TSoftObjectPtr<UWorld> LvlRef = LS->GetWorldAsset();
