@@ -36,4 +36,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Level | Utils")
 	static void GetAllSublevel(const TSoftObjectPtr<UWorld>& WorldRef, TArray<TSoftObjectPtr<UWorld>>& OutLevel);
+
+	UFUNCTION(BlueprintCallable, Category = "Level | Utils", meta = (WorldContext = "WorldContextObject"))
+	static void UnloadAllSublevel(UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintCallable, Category = "Level | Utils", meta = (WorldContext = "WorldContextObject"))
+	static void LoadSublevel(UObject* WorldContextObject, const TSoftObjectPtr<UWorld>& SublevelToLoad);
 };

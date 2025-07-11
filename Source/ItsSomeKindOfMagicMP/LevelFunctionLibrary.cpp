@@ -3,6 +3,9 @@
 
 #include "LevelFunctionLibrary.h"
 #include "Misc/Paths.h"
+#include "Kismet/GameplayStatics.h"
+#include "Misc/PackageName.h"
+#include "Engine/LevelStreaming.h"
 
 bool ULevelFunctionLibrary::IsActorInSublevel(const AActor* Actor, const TSoftObjectPtr<UWorld>& WorldReference)
 {
@@ -101,4 +104,46 @@ void ULevelFunctionLibrary::GetAllSublevel(const TSoftObjectPtr<UWorld>& WorldRe
         OutLevel.AddUnique(LvlRef);
     }
 }
+
+void ULevelFunctionLibrary::UnloadAllSublevel(UObject* WorldContextObject)
+{
+    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    if (!World) return;
+
+    for (ULevelStreaming* LS : World->GetStreamingLevels())
+    {
+        if (LS && LS->IsLevelLoaded())
+        {
+            LS->SetShouldBeLoaded(false);
+            LS->SetShouldBeVisible(false);
+        }
+    }
+
+    World->FlushLevelStreaming(EFlushLevelStreamingType::Full);
+}
+
+void ULevelFunctionLibrary::LoadSublevel(UObject* WorldContextObject, const TSoftObjectPtr<UWorld>& SublevelToLoad)
+{
+    UWorld* World = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
+    if (!World) return;
+
+    FSoftObjectPath SoftPath = SublevelToLoad.ToSoftObjectPath();
+    FString AssetName = SoftPath.GetAssetName();
+    FName LevelName = FName(*AssetName);
+
+    if (ULevelStreaming* LS = UGameplayStatics::GetStreamingLevel(World, LevelName))
+    {
+        LS->SetShouldBeLoaded(true);
+        LS->SetShouldBeVisible(true);
+    }
+    else
+    {
+        FLatentActionInfo Dummy;
+        UGameplayStatics::LoadStreamLevel(WorldContextObject, LevelName, true, true, Dummy);
+    }
+
+    World->FlushLevelStreaming(EFlushLevelStreamingType::Full);
+}
+
+
 
