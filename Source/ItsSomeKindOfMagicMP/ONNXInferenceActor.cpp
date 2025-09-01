@@ -176,7 +176,7 @@ FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTens
         {
             Result.PredictedLabel = TEXT("Unknown");
         }
-
+        /*
         // Loggen / On-Screen-Debug
         FString LogStr = FString::Printf(
             TEXT("Predicted Rune: %s (Index: %d, Confidence: %.2f)"),
@@ -185,7 +185,7 @@ FPredictionResult AONNXInferenceActor::ProcessOutput(const TArray<UE::NNE::FTens
         if (GEngine)
         {
             GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, LogStr);
-        }
+        }*/
     }
     else
     {

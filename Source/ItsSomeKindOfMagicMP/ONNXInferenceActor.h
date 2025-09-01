@@ -40,19 +40,19 @@ struct FPredictionResult
     GENERATED_BODY()
 
     /** Der ermittelte Label-Name der Rune */
-    UPROPERTY(BlueprintReadOnly, Category = "Prediction")
+    UPROPERTY(BlueprintReadWrite, Category = "Prediction")
     FString PredictedLabel;
 
     /** Der ermittelte Index */
-    UPROPERTY(BlueprintReadOnly, Category = "Prediction")
+    UPROPERTY(BlueprintReadWrite, Category = "Prediction")
     int32 PredictedIndex;
 
     /** Die Confidence bzw. Wahrscheinlichkeit */
-    UPROPERTY(BlueprintReadOnly, Category = "Prediction")
+    UPROPERTY(BlueprintReadWrite, Category = "Prediction")
     float Confidence;
 
     /** War die Inferenz erfolgreich? */
-    UPROPERTY(BlueprintReadOnly, Category = "Prediction")
+    UPROPERTY(BlueprintReadWrite, Category = "Prediction")
     bool bSuccess;
 };
 
