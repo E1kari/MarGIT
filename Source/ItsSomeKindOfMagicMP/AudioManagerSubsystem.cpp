@@ -92,24 +92,46 @@ void UAudioManagerSubsystem::FadeMusicLayer(FName LayerName, float Volume)
 	CurrentMusicComponent->SetFloatParameter(LayerName, Volume);
 }
 
-void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, float Volume)
+void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, bool bIsSpell, float Volume)
 {
 	if (!Sfx) return;
 
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	UGameplayStatics::SpawnSound2D(World, Sfx, Volume, 0.0f, 0.0f, nullptr, false, true);
+	UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 0.0f, 0.0f, nullptr, false, true);
 }
 
-void UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, float Volume)
+void UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell, float Volume)
 {
 	if (!Sfx) return;
 
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume, 0.0f, 0.0f, Attenuation, nullptr, true);
+	UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell? SpellSFXVolume : NonSpellSFXVolume), 0.0f, 0.0f, Attenuation, nullptr, true);
+}
+
+void UAudioManagerSubsystem::SetMasterVolume(float Volume)
+{
+	MasterVolume = Volume;
+	CurrentMusicComponent->SetVolumeMultiplier(MasterVolume * MusicVolume);
+}
+
+void UAudioManagerSubsystem::SetMusicVolume(float Volume)
+{
+	MusicVolume = Volume;
+	CurrentMusicComponent->SetVolumeMultiplier(MasterVolume * MusicVolume);
+}
+
+void UAudioManagerSubsystem::SetSpellSFXVolume(float Volume)
+{
+	SpellSFXVolume = Volume;
+}
+
+void UAudioManagerSubsystem::SetNonSpellSFXVolume(float Volume)
+{
+	NonSpellSFXVolume = Volume;
 }
 
 void UAudioManagerSubsystem::HandleOldMusicFadeOut(UAudioComponent* OldComp, float Delay)
