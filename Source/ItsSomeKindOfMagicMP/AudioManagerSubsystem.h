@@ -36,14 +36,31 @@ public:
 	void FadeMusicLayer(FName LayerName, float Volume);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
-	void PlaySFX2D(USoundBase* Sfx, float Volume = 1.0f);
+	void PlaySFX2D(USoundBase* Sfx, bool bIsSpell = false, float Volume = 1.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
-	void PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, float Volume = 1.0f);
+	void PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell = false, float Volume = 1.0f);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void SetMasterVolume(float Volume);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void SetMusicVolume(float Volume);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void SetSpellSFXVolume(float Volume);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager")
+	void SetNonSpellSFXVolume(float Volume);
 
 private:
 	UPROPERTY()
 	UAudioComponent* CurrentMusicComponent = nullptr;
 
 	void HandleOldMusicFadeOut(UAudioComponent* OldComp, float Delay);
+
+	float MasterVolume = 1.0f;
+	float MusicVolume = 1.0f;
+	float SpellSFXVolume = 1.0f;
+	float NonSpellSFXVolume = 1.0f;
 };
