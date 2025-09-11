@@ -38,8 +38,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void PlaySFX2D(USoundBase* Sfx, bool bIsSpell = false, float Volume = 1.0f);
 
-	UFUNCTION(BlueprintCallable, Category = "AudioManager")
-	void PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell = false, float Volume = 1.0f);
+	UFUNCTION(BlueprintCallable, Category = "AudioManager", meta=(ReturnDisplayName = "Audio Component", DisplayName = "Play SFX At Location"))
+	UAudioComponent* PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation = nullptr, bool bIsSpell = false, float Volume = 1.0f, bool bAutoDestroy = true);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void SetMasterVolume(float Volume);
