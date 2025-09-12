@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
 
 void UAudioManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -99,17 +100,19 @@ void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, bool bIsSpell, float Vol
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 0.0f, 0.0f, nullptr, false, true);
+	UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, nullptr, false, true);
 }
 
-void UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell, float Volume)
+UAudioComponent* UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell, float Volume, bool bAutoDestroy)
 {
-	if (!Sfx) return;
+	if (!Sfx) return nullptr;
 
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!World) return nullptr;
 
-	UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell? SpellSFXVolume : NonSpellSFXVolume), 0.0f, 0.0f, Attenuation, nullptr, true);
+	UAudioComponent* SFXAtLocation = UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, Attenuation, nullptr, true);
+	SFXAtLocation->bAutoDestroy = bAutoDestroy;
+	return SFXAtLocation;
 }
 
 void UAudioManagerSubsystem::SetMasterVolume(float Volume)
