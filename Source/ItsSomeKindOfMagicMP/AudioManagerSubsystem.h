@@ -8,6 +8,22 @@
 #include "Components/AudioComponent.h"
 #include "AudioManagerSubsystem.generated.h"
 
+USTRUCT(BlueprintType)
+struct FManagedSFX
+{
+	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SFX")
+	TWeakObjectPtr<UAudioComponent> AudioComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SFX")
+	bool bIsSpell = false;
+
+	/** Ursprünglicher, vom Aufrufer gewünschter Basis-Volume (vor Master/Group) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SFX")
+	float BaseVolume = 1.f;
+};
+
 UCLASS()
 class ITSSOMEKINDOFMAGICMP_API UAudioManagerSubsystem : public UGameInstanceSubsystem
 {
@@ -56,8 +72,10 @@ public:
 private:
 	UPROPERTY()
 	UAudioComponent* CurrentMusicComponent = nullptr;
+	UPROPERTY() TArray<FManagedSFX> ManagedSFX;
 
 	void HandleOldMusicFadeOut(UAudioComponent* OldComp, float Delay);
+	void SetManagedSFXVolume();
 
 	float MasterVolume = 1.0f;
 	float MusicVolume = 1.0f;

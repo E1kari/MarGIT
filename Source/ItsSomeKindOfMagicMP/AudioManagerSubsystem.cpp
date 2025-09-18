@@ -125,7 +125,7 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAttached(USoundBase* Sfx, AActor
 	USceneComponent* AttachComp = TargetActor->GetRootComponent();
 	if (!AttachComp) return nullptr;
 
-	float UseVolume = bIsSpell ? Volume * SpellSFXVolume : Volume * NonSpellSFXVolume;
+	float UseVolume = bIsSpell ? Volume * SpellSFXVolume * MasterVolume : Volume * NonSpellSFXVolume * MasterVolume;
 
 	UAudioComponent* AC = UGameplayStatics::SpawnSoundAttached(
 		Sfx,
@@ -141,6 +141,12 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAttached(USoundBase* Sfx, AActor
 		/*ConcurrencySettings*/ nullptr,
 		/*bAutoDestroy*/ bAutoDestroy
 	);
+
+	FManagedSFX Entry;
+	Entry.AudioComp = AC;
+	Entry.bIsSpell = bIsSpell;
+	Entry.BaseVolume = Volume;
+	ManagedSFX.Add(Entry);
 
 	return AC;
 }
@@ -160,11 +166,13 @@ void UAudioManagerSubsystem::SetMusicVolume(float Volume)
 void UAudioManagerSubsystem::SetSpellSFXVolume(float Volume)
 {
 	SpellSFXVolume = Volume;
+	SetManagedSFXVolume();
 }
 
 void UAudioManagerSubsystem::SetNonSpellSFXVolume(float Volume)
 {
 	NonSpellSFXVolume = Volume;
+	SetManagedSFXVolume();
 }
 
 void UAudioManagerSubsystem::HandleOldMusicFadeOut(UAudioComponent* OldComp, float Delay)
@@ -181,4 +189,22 @@ void UAudioManagerSubsystem::HandleOldMusicFadeOut(UAudioComponent* OldComp, flo
 		Delay,
 		false
 	);
+}
+
+void UAudioManagerSubsystem::SetManagedSFXVolume()
+{
+	for (FManagedSFX SFX : ManagedSFX)
+	{
+		if (SFX.AudioComp.Get())
+		{
+			if (SFX.bIsSpell)
+			{
+				SFX.AudioComp.Get()->SetVolumeMultiplier(MasterVolume * SpellSFXVolume * SFX.BaseVolume);
+			}
+			else
+			{
+				SFX.AudioComp.Get()->SetVolumeMultiplier(MasterVolume * NonSpellSFXVolume * SFX.BaseVolume);
+			}
+		}
+	}
 }
