@@ -8,9 +8,6 @@
 #include "Components/AudioComponent.h"
 #include "AudioManagerSubsystem.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class ITSSOMEKINDOFMAGICMP_API UAudioManagerSubsystem : public UGameInstanceSubsystem
 {
@@ -35,11 +32,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void FadeMusicLayer(FName LayerName, float Volume);
 
-	UFUNCTION(BlueprintCallable, Category = "AudioManager")
-	void PlaySFX2D(USoundBase* Sfx, bool bIsSpell = false, float Volume = 1.0f);
+	UFUNCTION(BlueprintCallable, Category = "AudioManager", meta = (ReturnDisplayName = "Audio Component", DisplayName = "Play SFX2D"))
+	UAudioComponent* PlaySFX2D(USoundBase* Sfx, bool bIsSpell = false, float Volume = 1.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager", meta=(ReturnDisplayName = "Audio Component", DisplayName = "Play SFX At Location"))
 	UAudioComponent* PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation = nullptr, bool bIsSpell = false, float Volume = 1.0f, bool bAutoDestroy = true);
+
+	UFUNCTION(BlueprintCallable, Category = "AudioManager", meta = (ReturnDisplayName = "Audio Component", DisplayName = "Play SFX Attached"))
+	UAudioComponent* PlaySFXAttached(USoundBase* Sfx, AActor* Target, USoundAttenuation* Attenuation = nullptr, bool bIsSpell = false, float Volume = 1.0f, bool bAutoDestroy = true);
 
 	UFUNCTION(BlueprintCallable, Category = "AudioManager")
 	void SetMasterVolume(float Volume);

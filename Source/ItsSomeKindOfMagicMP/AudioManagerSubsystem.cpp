@@ -93,14 +93,16 @@ void UAudioManagerSubsystem::FadeMusicLayer(FName LayerName, float Volume)
 	CurrentMusicComponent->SetFloatParameter(LayerName, Volume);
 }
 
-void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, bool bIsSpell, float Volume)
+UAudioComponent* UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, bool bIsSpell, float Volume)
 {
-	if (!Sfx) return;
+	if (!Sfx) return nullptr;
 
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!World) return nullptr;
 
-	UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, nullptr, false, true);
+	UAudioComponent* AC = UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, nullptr, false, true);
+
+	return AC;
 }
 
 UAudioComponent* UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell, float Volume, bool bAutoDestroy)
@@ -113,6 +115,36 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVec
 	UAudioComponent* SFXAtLocation = UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, Attenuation, nullptr, true);
 	SFXAtLocation->bAutoDestroy = bAutoDestroy;
 	return SFXAtLocation;
+}
+
+UAudioComponent* UAudioManagerSubsystem::PlaySFXAttached(USoundBase* Sfx, AActor* TargetActor, USoundAttenuation* Attenuation, bool bIsSpell, float Volume, bool bAutoDestroy)
+{
+	if (!Sfx) return nullptr;
+	if (!TargetActor) return nullptr;
+
+	USceneComponent* AttachComp = TargetActor->GetRootComponent();
+	if (!AttachComp) return nullptr;
+	GEngine->AddOnScreenDebugMessage(INDEX_NONE, 1.f, FColor::Green, TEXT("Created in C++"));
+
+	float UseVolume = bIsSpell ? Volume * SpellSFXVolume : Volume * NonSpellSFXVolume;
+
+	UAudioComponent* AC = UGameplayStatics::SpawnSoundAttached(
+		Sfx,
+		AttachComp,
+		NAME_None,                            // AttachPointName (Socket)
+		FVector::ZeroVector,                  // Relativer Offset
+		EAttachLocation::KeepRelativeOffset,  // Attach-Modus
+		/*bStopWhenAttachedToDestroyed*/ true,
+		/*VolumeMultiplier*/ UseVolume,
+		/*PitchMultiplier*/ 1.0f,
+		/*StartTime*/ 0.0f,
+		/*AttenuationSettings*/ Attenuation,
+		/*ConcurrencySettings*/ nullptr,
+		/*bAutoDestroy*/ bAutoDestroy
+	);
+	if (!AC) GEngine->AddOnScreenDebugMessage(INDEX_NONE, 1.f, FColor::Green, TEXT("Problem"));
+
+	return AC;
 }
 
 void UAudioManagerSubsystem::SetMasterVolume(float Volume)
