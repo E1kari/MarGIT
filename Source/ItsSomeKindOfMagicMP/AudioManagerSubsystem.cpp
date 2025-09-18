@@ -112,8 +112,8 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVec
 	UWorld* World = GetWorld();
 	if (!World) return nullptr;
 
-	UAudioComponent* SFXAtLocation = UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, Attenuation, nullptr, true);
-	SFXAtLocation->bAutoDestroy = bAutoDestroy;
+	UAudioComponent* SFXAtLocation = UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, Attenuation, nullptr, bAutoDestroy);
+	//SFXAtLocation->bAutoDestroy = bAutoDestroy;
 	return SFXAtLocation;
 }
 
@@ -124,7 +124,6 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAttached(USoundBase* Sfx, AActor
 
 	USceneComponent* AttachComp = TargetActor->GetRootComponent();
 	if (!AttachComp) return nullptr;
-	GEngine->AddOnScreenDebugMessage(INDEX_NONE, 1.f, FColor::Green, TEXT("Created in C++"));
 
 	float UseVolume = bIsSpell ? Volume * SpellSFXVolume : Volume * NonSpellSFXVolume;
 
@@ -142,7 +141,6 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAttached(USoundBase* Sfx, AActor
 		/*ConcurrencySettings*/ nullptr,
 		/*bAutoDestroy*/ bAutoDestroy
 	);
-	if (!AC) GEngine->AddOnScreenDebugMessage(INDEX_NONE, 1.f, FColor::Green, TEXT("Problem"));
 
 	return AC;
 }
