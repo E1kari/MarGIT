@@ -93,14 +93,16 @@ void UAudioManagerSubsystem::FadeMusicLayer(FName LayerName, float Volume)
 	CurrentMusicComponent->SetFloatParameter(LayerName, Volume);
 }
 
-void UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, bool bIsSpell, float Volume)
+UAudioComponent* UAudioManagerSubsystem::PlaySFX2D(USoundBase* Sfx, bool bIsSpell, float Volume)
 {
-	if (!Sfx) return;
+	if (!Sfx) return nullptr;
 
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!World) return nullptr;
 
-	UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, nullptr, false, true);
+	UAudioComponent* AC = UGameplayStatics::SpawnSound2D(World, Sfx, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, nullptr, false, true);
+
+	return AC;
 }
 
 UAudioComponent* UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVector Location, USoundAttenuation* Attenuation, bool bIsSpell, float Volume, bool bAutoDestroy)
@@ -110,9 +112,43 @@ UAudioComponent* UAudioManagerSubsystem::PlaySFXAtLocation(USoundBase* Sfx, FVec
 	UWorld* World = GetWorld();
 	if (!World) return nullptr;
 
-	UAudioComponent* SFXAtLocation = UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, Attenuation, nullptr, true);
-	SFXAtLocation->bAutoDestroy = bAutoDestroy;
+	UAudioComponent* SFXAtLocation = UGameplayStatics::SpawnSoundAtLocation(World, Sfx, Location, FRotator::ZeroRotator, Volume * MasterVolume * (bIsSpell ? SpellSFXVolume : NonSpellSFXVolume), 1.0f, 0.0f, Attenuation, nullptr, bAutoDestroy);
+	//SFXAtLocation->bAutoDestroy = bAutoDestroy;
 	return SFXAtLocation;
+}
+
+UAudioComponent* UAudioManagerSubsystem::PlaySFXAttached(USoundBase* Sfx, AActor* TargetActor, USoundAttenuation* Attenuation, bool bIsSpell, float Volume, bool bAutoDestroy)
+{
+	if (!Sfx) return nullptr;
+	if (!TargetActor) return nullptr;
+
+	USceneComponent* AttachComp = TargetActor->GetRootComponent();
+	if (!AttachComp) return nullptr;
+
+	float UseVolume = bIsSpell ? Volume * SpellSFXVolume * MasterVolume : Volume * NonSpellSFXVolume * MasterVolume;
+
+	UAudioComponent* AC = UGameplayStatics::SpawnSoundAttached(
+		Sfx,
+		AttachComp,
+		NAME_None,                            // AttachPointName (Socket)
+		FVector::ZeroVector,                  // Relativer Offset
+		EAttachLocation::KeepRelativeOffset,  // Attach-Modus
+		/*bStopWhenAttachedToDestroyed*/ true,
+		/*VolumeMultiplier*/ UseVolume,
+		/*PitchMultiplier*/ 1.0f,
+		/*StartTime*/ 0.0f,
+		/*AttenuationSettings*/ Attenuation,
+		/*ConcurrencySettings*/ nullptr,
+		/*bAutoDestroy*/ bAutoDestroy
+	);
+
+	FManagedSFX Entry;
+	Entry.AudioComp = AC;
+	Entry.bIsSpell = bIsSpell;
+	Entry.BaseVolume = Volume;
+	ManagedSFX.Add(Entry);
+
+	return AC;
 }
 
 void UAudioManagerSubsystem::SetMasterVolume(float Volume)
@@ -130,11 +166,13 @@ void UAudioManagerSubsystem::SetMusicVolume(float Volume)
 void UAudioManagerSubsystem::SetSpellSFXVolume(float Volume)
 {
 	SpellSFXVolume = Volume;
+	SetManagedSFXVolume();
 }
 
 void UAudioManagerSubsystem::SetNonSpellSFXVolume(float Volume)
 {
 	NonSpellSFXVolume = Volume;
+	SetManagedSFXVolume();
 }
 
 void UAudioManagerSubsystem::HandleOldMusicFadeOut(UAudioComponent* OldComp, float Delay)
@@ -151,4 +189,22 @@ void UAudioManagerSubsystem::HandleOldMusicFadeOut(UAudioComponent* OldComp, flo
 		Delay,
 		false
 	);
+}
+
+void UAudioManagerSubsystem::SetManagedSFXVolume()
+{
+	for (FManagedSFX SFX : ManagedSFX)
+	{
+		if (SFX.AudioComp.Get())
+		{
+			if (SFX.bIsSpell)
+			{
+				SFX.AudioComp.Get()->SetVolumeMultiplier(MasterVolume * SpellSFXVolume * SFX.BaseVolume);
+			}
+			else
+			{
+				SFX.AudioComp.Get()->SetVolumeMultiplier(MasterVolume * NonSpellSFXVolume * SFX.BaseVolume);
+			}
+		}
+	}
 }
