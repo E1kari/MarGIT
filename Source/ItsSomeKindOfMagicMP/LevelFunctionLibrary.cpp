@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Misc/PackageName.h"
 #include "Engine/LevelStreaming.h"
+#include "Engine/Engine.h"
 
 bool ULevelFunctionLibrary::IsActorInSublevel(const AActor* Actor, const TSoftObjectPtr<UWorld>& WorldReference)
 {
@@ -85,23 +86,41 @@ bool ULevelFunctionLibrary::IsSublevelLoaded(UObject* WorldContextObject, const 
     return false;
 }
 
-void ULevelFunctionLibrary::GetAllSublevel(const TSoftObjectPtr<UWorld>& WorldRef, TArray<TSoftObjectPtr<UWorld>>& OutLevel)
+void ULevelFunctionLibrary::GetAllSublevel(const UObject* WorldContextObject, TArray<TSoftObjectPtr<UWorld>>& OutLevel)
 {
     OutLevel.Empty();
-    UWorld* World = WorldRef.Get();
-    if (!World)
-    {
-        World = WorldRef.LoadSynchronous();
-    }
+    UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull) : nullptr;
+
     if (!World)
     {
         UE_LOG(LogTemp, Warning, TEXT("GetAllSublevel: WorldRef konnte nicht geladen werden"));
         return;
     }
-    for (ULevelStreaming* LS : World->GetStreamingLevels())
+    
+    const TArray<ULevelStreaming*>& Streaming = World->GetStreamingLevels();
+    for (ULevelStreaming* LS : Streaming)
     {
-        TSoftObjectPtr<UWorld> LvlRef = LS->GetWorldAsset();
-        OutLevel.AddUnique(LvlRef);
+        if (!LS) continue;
+
+        // In 5.x ist das die saubere Art, ans Asset zu kommen
+        TSoftObjectPtr<UWorld> LevelAsset = LS->GetWorldAsset();
+        if (!LevelAsset.IsNull() || LevelAsset.ToSoftObjectPath().IsValid())
+        {
+            OutLevel.AddUnique(LevelAsset);
+        }
+        else
+        {
+            // Fallback über Paketname (nützlich bei nicht geladenem Asset)
+#if ENGINE_MAJOR_VERSION >= 5
+            const FName PkgName = LS->GetWorldAssetPackageFName(); // oder GetPackageNameToLoad()
+#else
+            const FName PkgName = LS->GetWorldAssetPackageFName();
+#endif
+            if (!PkgName.IsNone())
+            {
+                OutLevel.AddUnique(TSoftObjectPtr<UWorld>(FSoftObjectPath(PkgName.ToString())));
+            }
+        }
     }
 }
 
